@@ -1,0 +1,75 @@
+pack: noise
+version: 1
+
+# Suppressors: the reasons a match is *not* a finding.
+#
+# This pack is the difference between a tool someone uses twice and one they
+# trust. Precision beats recall here — a report full of `your-api-key-here` and
+# Stripe's test card teaches a compliance lead to skim, and after that the real
+# critical finding on page three goes unread.
+#
+# Every suppression is counted and reported, so a category tuned out by mistake
+# is visible rather than quietly missing.
+#
+# `scope: value` tests the matched text itself.
+# `scope: window` tests the surrounding text, for cases where the giveaway is
+# nearby rather than in the value.
+
+suppress:
+  - id: noise.placeholder_value
+    name: Placeholder or template value
+    scope: value
+    pattern: '(?i)(?:^|[^a-z])(?:your[-_ ]?[a-z]*[-_ ]?(?:key|token|secret|password)[-_ ]?here|changeme|change[-_ ]me|placeholder|redacted|xxx+|yyy+|todo|fixme|insert[-_ ]?[a-z]*[-_ ]?here|dummy|sample|notreal|fake)'
+
+  - id: noise.angle_bracket_template
+    name: Templated value (<your-key>, ${VAR}, {{ token }})
+    scope: value
+    pattern: '<[^>]{2,40}>|\$\{[^}]+\}|\{\{[^}]+\}\}|%[A-Z_]+%'
+
+  - id: noise.provider_documentation_example
+    name: Provider documentation example
+    scope: value
+    pattern: '(?i)example|acme|foobar|lorem|ipsum|deadbeef|0{8,}|1234567890'
+
+  - id: noise.test_key_prefix
+    name: Explicit test-mode key
+    scope: value
+    pattern: '(?i)\b(?:sk|pk|rk)_test_|^test[-_]|_test$|\btest[-_](?:key|token|secret)\b'
+
+  - id: noise.known_test_card
+    name: Reserved test card number
+    scope: value
+    categories: [pii]
+    pattern: '4242[ -]?4242[ -]?4242[ -]?4242|4111[ -]?1111[ -]?1111[ -]?1111|5555[ -]?5555[ -]?5555[ -]?4444|5105[ -]?1051[ -]?0510[ -]?5100|3782[ -]?822463[ -]?10005|6011[ -]?1111[ -]?1111[ -]?1117'
+
+  - id: noise.reserved_domain
+    name: Reserved or vendor domain
+    scope: value
+    categories: [pii]
+    # RFC 2606 reserved names, plus the vendor addresses that appear in every
+    # transcript and belong to nobody the customer is responsible for.
+    pattern: '(?i)@(?:example\.(?:com|org|net)|test|invalid|localhost|domain\.com|email\.com|yourcompany\.[a-z]+|company\.com|sentry\.io|supabase\.(?:io|co)|github\.com|githubusercontent\.com|npmjs\.(?:com|org)|anthropic\.com|openai\.com|google\.com|gstatic\.com|vercel\.com|railway\.app|resend\.(?:com|dev)|stripe\.com|w3\.org|schemas?\.[a-z]+)'
+
+  - id: noise.reserved_ip_range
+    name: Documentation IP range (RFC 5737 / 3849)
+    scope: value
+    pattern: '\b(?:192\.0\.2\.|198\.51\.100\.|203\.0\.113\.|2001:db8:)'
+
+  - id: noise.test_fixture_context
+    name: Declared test fixture or documentation block
+    scope: window
+    # The surrounding text says outright that these are fixtures. Trusting that
+    # is a deliberate trade: it is how a repository's own test data stops
+    # drowning the report, and it is why the corpus has a control employee.
+    pattern: '(?i)(?:reserved (?:documentation|test) values?|RFC ?(?:5737|2606|3849)|test fixtures?|\bfixtures?/|use placeholders?|example configuration|sample config|\.example\b|dummy data|for testing only|safe to commit)'
+
+  - id: noise.image_data_uri
+    name: Inline image or data URI
+    scope: value
+    pattern: '^data:[a-z]+/[a-z0-9.+-]+;base64,'
+
+  - id: noise.git_object_hash
+    name: Git object or content hash
+    scope: window
+    categories: [secret]
+    pattern: '(?i)\b(?:commit|sha1?|sha256|checksum|digest|etag|blob|tree)\b\s*[:=]?\s*[a-f0-9]{7,}'

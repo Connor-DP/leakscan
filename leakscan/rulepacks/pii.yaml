@@ -1,0 +1,292 @@
+pack: pii
+version: 1
+
+# Personal data, and the special-category subset that UK GDPR Article 9 treats
+# as its own class of risk. Volume matters as much as the fields themselves —
+# the engine adds a bulk finding when one record carries many kinds at once.
+
+rules:
+  # -- government identifiers ----------------------------------------------
+
+  - id: pii.uk_ni_number.v1
+    name: UK National Insurance number
+    category: pii
+    subtype: uk_ni_number
+    severity: high
+    confidence: 92
+    # The prefix rules are the validation: D, F, I, Q, U and V never appear
+    # first; O is never second; and the suffix is A-D. That alone rejects the
+    # reserved QQ123456C without needing a suppressor for it.
+    pattern: '\b(?![DFIQUV])[A-CEGHJ-PR-TW-Z](?![DFIOQUV])[A-CEGHJ-NPR-TW-Z]\s?\d{2}\s?\d{2}\s?\d{2}\s?[A-D]\b'
+
+  - id: pii.nhs_number.v1
+    name: NHS number
+    category: pii
+    subtype: nhs_number
+    severity: high
+    confidence: 80
+    pattern: '\b\d{3}\s?\d{3}\s?\d{4}\b'
+    # Wide window: in a query result the column header naming the field can sit
+    # a couple of long rows away from the value itself.
+    context_window: 400
+    requires_context:
+      - nhs
+      - patient
+      - health
+
+  - id: pii.uk_passport.v1
+    name: UK passport number
+    category: pii
+    subtype: passport_number
+    severity: high
+    confidence: 70
+    pattern: '\b\d{9}\b'
+    requires_context:
+      - passport
+
+  - id: pii.uk_driving_licence.v1
+    name: UK driving licence number
+    category: pii
+    subtype: driving_licence
+    severity: high
+    confidence: 90
+    # DVLA format: 5 surname characters, 6 digits encoding date of birth and
+    # sex, 2 initials, then a check. It is personal data disguised as a
+    # reference number — the holder's name and birthday are inside it.
+    pattern: '\b[A-Z9]{5}\d{6}[A-Z9]{2}\d[A-Z]{2}\b'
+
+  - id: pii.uk_utr.v1
+    name: HMRC Unique Taxpayer Reference
+    category: pii
+    subtype: utr
+    severity: high
+    confidence: 85
+    pattern: '\b\d{5}\s?\d{5}\b'
+    context_window: 200
+    requires_context:
+      - utr
+      - taxpayer reference
+      - tax reference
+      - self assessment
+      - hmrc
+      - cis
+
+  - id: pii.uk_vat_number.v1
+    name: UK VAT registration number
+    category: pii
+    subtype: vat_number
+    severity: low
+    confidence: 85
+    # Semi-public — it is printed on every invoice. Worth reporting as
+    # corroboration that a real supplier or client record was pasted.
+    pattern: '\bGB\s?\d{3}\s?\d{4}\s?\d{2}(?:\s?\d{3})?\b'
+
+  - id: pii.uk_eori.v1
+    name: UK EORI number
+    category: pii
+    subtype: eori
+    severity: low
+    confidence: 85
+    pattern: '\bGB\d{12}\b'
+
+  - id: pii.uk_company_number.v1
+    name: Companies House number
+    category: pii
+    subtype: company_number
+    severity: low
+    confidence: 75
+    # Public register data, so low on its own; context is required because the
+    # bare pattern also fits a National Insurance number.
+    pattern: '\b(?:0\d{7}|[A-Z]{2}\d{6})\b'
+    context_window: 160
+    requires_context:
+      - company number
+      - companies house
+      - company no
+      - registered number
+      - registration number
+
+  # -- financial ------------------------------------------------------------
+
+  - id: pii.iban.v1
+    name: IBAN
+    category: pii
+    subtype: iban
+    severity: critical
+    confidence: 92
+    pattern: '\b[A-Z]{2}\d{2}(?:\s?[A-Z0-9]{4}){3,6}\b'
+
+  - id: pii.uk_bank_details.v1
+    name: UK sort code and account number
+    category: pii
+    subtype: bank_details
+    severity: critical
+    confidence: 90
+    pattern: '\b\d{2}-\d{2}-\d{2}\b'
+    requires_context:
+      - sort
+      - account
+      - bank
+      - payroll
+
+  - id: pii.payment_card.v1
+    name: Payment card number
+    category: pii
+    subtype: payment_card
+    severity: critical
+    confidence: 90
+    pattern: '\b(?:\d[ -]?){12,18}\d\b'
+    validate: luhn
+
+  - id: pii.salary.v1
+    name: Salary or pay figure
+    category: pii
+    subtype: salary
+    severity: medium
+    confidence: 70
+    pattern: '(?i)\b(?:salary|pay|wage|remuneration)\b[^\n]{0,40}?([£$€]?\s?\d{2,3}[,.]?\d{3})'
+    group: 1
+
+  - id: pii.salary_column.v1
+    name: Pay figure in a data export
+    category: pii
+    subtype: salary
+    severity: medium
+    confidence: 65
+    # The header names the column; the figure sits at the end of a row several
+    # lines below, so the same-line rule above cannot reach it.
+    pattern: '(?m),\s?(\d{4,6})\s*$'
+    context_window: 500
+    requires_context:
+      - salary
+      - payroll
+      - wage
+      - pay
+
+  # -- identity and contact -------------------------------------------------
+
+  - id: pii.email_address.v1
+    name: Email address
+    category: pii
+    subtype: email_address
+    severity: low
+    confidence: 85
+    pattern: '\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b'
+
+  - id: pii.uk_phone.v1
+    name: UK phone number
+    category: pii
+    subtype: phone_number
+    severity: medium
+    confidence: 80
+    pattern: '\b(?:0|\+44\s?)7\d{3}\s?\d{6}\b|\b0[12]\d{2,3}\s?\d{6,7}\b'
+
+  - id: pii.uk_postcode.v1
+    name: UK postcode
+    category: pii
+    subtype: uk_postcode
+    severity: low
+    confidence: 75
+    pattern: '\b[A-Z]{1,2}\d[A-Z\d]?\s?\d[A-Z]{2}\b'
+
+  - id: pii.date_of_birth.v1
+    name: Date of birth
+    category: pii
+    subtype: date_of_birth
+    severity: medium
+    confidence: 75
+    pattern: '(?i)\b(?:dob|date of birth|born)\b\s*[:=]?\s*([0-9]{1,2}[/\-. ][A-Za-z0-9]{2,9}[/\-. ][0-9]{2,4})'
+    group: 1
+
+  - id: pii.date_of_birth_column.v1
+    name: Date of birth in a data export
+    category: pii
+    subtype: date_of_birth
+    severity: medium
+    confidence: 70
+    # Catches a bare date sitting in a row whose header declared a dob column.
+    pattern: '\b\d{1,2} (?:January|February|March|April|May|June|July|August|September|October|November|December) (?:19|20)\d{2}\b'
+    requires_context:
+      - dob
+      - date of birth
+      - born
+      - new starter
+
+  - id: pii.person_name.v1
+    name: Person name in a structured field
+    category: pii
+    subtype: person_name
+    severity: medium
+    confidence: 70
+    pattern: '(?i)\b(?:first_?name|last_?name|full_?name|employee_?name|candidate|staff_?name)\b\s*[:=,]\s*["'']?([A-Z][a-z]+(?:[ ''-][A-Z][a-z]+)+)'
+    group: 1
+
+  - id: pii.person_name_row.v1
+    name: Person name in a personal-data row
+    category: pii
+    subtype: person_name
+    severity: medium
+    confidence: 60
+    # A capitalised full name on a line that also carries an NI number or a
+    # date of birth is a record about someone, not prose.
+    pattern: '(?m)^([A-Z][a-z]+(?:[ ''-][A-Z][a-z]+)+),(?=[^\n]*(?:\d{1,2} [A-Z][a-z]+ \d{4}|[A-Z]{2}\s?\d{6}\s?[A-D]))'
+    group: 1
+
+  - id: pii.home_address.v1
+    name: Home address
+    category: pii
+    subtype: home_address
+    severity: medium
+    confidence: 75
+    pattern: '\b\d{1,4}[a-zA-Z]? [A-Z][a-z]+(?: [A-Z][a-z]+)* (?:Road|Street|Avenue|Lane|Drive|Close|Way|Court|Crescent|Place|Terrace|Gardens)\b'
+
+  # -- special category (UK GDPR Article 9) ---------------------------------
+
+  - id: special.health_condition.v1
+    name: Health condition
+    category: special-category
+    subtype: health_condition
+    severity: critical
+    confidence: 85
+    pattern: '(?i)\b(?:multiple sclerosis|cancer|diabetes|epilepsy|HIV|depression|anxiety disorder|bipolar|schizophrenia|autism|ADHD|dyslexia|chronic fatigue|long covid|disability|pregnan(?:t|cy)|miscarriage|mental health)\b'
+
+  - id: special.occupational_health.v1
+    name: Occupational health or sickness record
+    category: special-category
+    subtype: occupational_health
+    severity: critical
+    confidence: 88
+    pattern: '(?i)\b(?:occupational health(?: report| assessment)?|fit note|sick(?:ness)? (?:record|absence|note)|phased return|reasonable adjustment)\b'
+
+  - id: special.criminal_record.v1
+    name: Criminal record or vetting outcome
+    category: special-category
+    subtype: criminal_record
+    severity: critical
+    confidence: 90
+    pattern: '(?i)\b(?:unspent conviction|spent conviction|criminal record|DBS check|disclosure and barring|caution recorded|vetting form)\b'
+
+  - id: special.dbs_certificate.v1
+    name: DBS certificate number
+    category: special-category
+    subtype: dbs_certificate
+    severity: high
+    confidence: 85
+    # The number is only issued against a criminal-record check, so its presence
+    # says a vetting check exists for a named person.
+    pattern: '\b\d{12}\b'
+    context_window: 200
+    requires_context:
+      - dbs
+      - disclosure and barring
+      - certificate number
+      - vetting
+      - enhanced check
+
+  - id: special.protected_characteristic.v1
+    name: Ethnicity, religion, union or sexuality
+    category: special-category
+    subtype: protected_characteristic
+    severity: critical
+    confidence: 70
+    pattern: '(?i)\b(?:ethnicity|ethnic origin|religio(?:n|us belief)|trade union member(?:ship)?|sexual orientation|gender reassignment)\b'

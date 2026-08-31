@@ -1,0 +1,201 @@
+pack: commercial
+version: 1
+
+# Commercial and business data — the category most tools miss entirely, and the
+# one an employee is most likely to paste without thinking twice.
+#
+# These are keyword-plus-number rules rather than shapes, so specificity is what
+# separates a finding from noise: "revenue was up" is nothing, "ARR £4.2M" is a
+# figure. Every rule here therefore requires an actual value next to the term.
+
+rules:
+  # -- financial metrics ----------------------------------------------------
+
+  - id: commercial.arr.v1
+    name: Annual recurring revenue
+    category: commercial
+    subtype: arr
+    severity: high
+    confidence: 90
+    pattern: '(?i)\b(?:ARR|annual recurring revenue)\b[^\n]{0,20}?([£$€]\s?[\d,.]+\s?[kmb]?)'
+    group: 1
+
+  - id: commercial.mrr.v1
+    name: Monthly recurring revenue
+    category: commercial
+    subtype: mrr
+    severity: high
+    confidence: 90
+    pattern: '(?i)\b(?:MRR|monthly recurring revenue)\b[^\n]{0,20}?([£$€]\s?[\d,.]+\s?[kmb]?)'
+    group: 1
+
+  - id: commercial.revenue.v1
+    name: Revenue figure
+    category: commercial
+    subtype: revenue
+    severity: high
+    confidence: 80
+    pattern: '(?i)\b(?:revenue|turnover|top ?line)\b[^\n]{0,25}?([£$€]\s?[\d,.]+\s?[kmb]?)'
+    group: 1
+
+  - id: commercial.margin.v1
+    name: Margin
+    category: commercial
+    subtype: gross_margin
+    severity: high
+    confidence: 85
+    pattern: '(?i)\b(?:gross margin|net margin|EBITDA|contribution margin)\b[^\n]{0,20}?(\d{1,3}(?:\.\d+)?\s?%|[£$€]\s?[\d,.]+\s?[kmb]?)'
+    group: 1
+
+  - id: commercial.burn_runway.v1
+    name: Burn rate or runway
+    category: commercial
+    subtype: burn_runway
+    severity: high
+    confidence: 88
+    pattern: '(?i)\b(?:burn(?: rate)?|runway|cash out)\b[^\n]{0,25}?([£$€]\s?[\d,.]+\s?[kmb]?|\d{1,2}\s?months)'
+    group: 1
+
+  # -- growth metrics -------------------------------------------------------
+
+  - id: commercial.churn.v1
+    name: Churn or retention rate
+    category: commercial
+    subtype: churn
+    severity: high
+    confidence: 88
+    pattern: '(?i)\b(?:logo churn|gross churn|net churn|churn(?: rate)?|net revenue retention|NRR|retention)\b[^\n]{0,25}?(\d{1,3}(?:\.\d+)?\s?%)'
+    group: 1
+
+  - id: commercial.cac_ltv.v1
+    name: Unit economics (CAC / LTV)
+    category: commercial
+    subtype: cac_ltv
+    severity: medium
+    confidence: 88
+    pattern: '(?i)\b(?:CAC|customer acquisition cost|LTV|lifetime value|payback period)\b[^\n]{0,20}?([£$€]\s?[\d,.]+\s?[kmb]?|\d{1,2}\s?months)'
+    group: 1
+
+  - id: commercial.conversion_metrics.v1
+    name: Conversion or engagement metric
+    category: commercial
+    subtype: growth_metric
+    severity: medium
+    confidence: 75
+    pattern: '(?i)\b(?:conversion rate|activation rate|signups?|MAU|DAU|NPS)\b[^\n]{0,20}?(\d{1,3}(?:\.\d+)?\s?%|[\d,]{3,})'
+    group: 1
+
+  # -- pricing, customers and contracts -------------------------------------
+
+  - id: commercial.contract_value.v1
+    name: Named client with a contract value
+    category: commercial
+    subtype: client_contract_values
+    severity: high
+    confidence: 88
+    # A capitalised company name immediately followed by an annual figure is a
+    # commercial relationship, not prose.
+    pattern: '\b([A-Z][A-Za-z&.'']+(?: [A-Z][A-Za-z&.'']+){0,3})\s*[—\-–:]\s*[£$€]\s?[\d,]+(?:\.\d+)?\s?(?:k|m)?\s?(?:/|per\s)(?:yr|year|annum|month|mo)'
+    group: 1
+
+  - id: commercial.discount_terms.v1
+    name: Discount or rate-card terms
+    category: commercial
+    subtype: discount_terms
+    severity: high
+    confidence: 85
+    pattern: '(?i)(\d{1,3}\s?%\s?discount|discount(?:ed)?\s+(?:of|at|to)\s+\d{1,3}\s?%|rate card|list price)'
+    group: 1
+
+  - id: commercial.deal_pipeline.v1
+    name: Pipeline or renewal status
+    category: commercial
+    subtype: renewal_risk
+    severity: medium
+    confidence: 70
+    pattern: '(?i)\b(?:renews?|renewal|at risk|churn risk|closed won|closed lost|in pipeline)\b[^\n]{0,30}?(\d{4}-\d{2}-\d{2}|at risk|list price)'
+    group: 0
+
+  - id: commercial.contract_document.v1
+    name: Contract or legal agreement
+    category: commercial
+    subtype: contract
+    severity: high
+    confidence: 75
+    pattern: '(?i)\b(?:master services agreement|MSA|statement of work|SOW|non-disclosure agreement|terms and conditions|liability cap|termination clause|framework agreement|service level agreement|engagement letter|heads of terms|letter of intent)\b'
+
+  - id: commercial.transactional_document.v1
+    name: Transactional commercial document
+    category: commercial
+    subtype: transactional_document
+    severity: medium
+    confidence: 70
+    # Sector-neutral on purpose. Every organisation with customers raises
+    # invoices and answers tenders; not every one has recurring revenue.
+    pattern: '(?i)\b(?:invoice|purchase order|\bPO number\b|quotation|tender|bid submission|remittance|credit note|payment terms|rate card|price list)\b'
+
+  - id: commercial.large_money_figure.v1
+    name: Large monetary figure
+    category: commercial
+    subtype: money_figure
+    severity: medium
+    confidence: 70
+    # Magnitude alone, with no keyword. A seven-figure sum in a chat is worth
+    # a look whether it is revenue, a contract, a claim or a budget.
+    pattern: '[£$€]\s?\d{1,3}(?:,\d{3}){2,}(?:\.\d{2})?|[£$€]\s?\d+(?:\.\d+)?\s?[mb]n?\b'
+
+  # -- corporate confidential -----------------------------------------------
+
+  - id: commercial.cap_table.v1
+    name: Cap table or equity split
+    category: commercial
+    subtype: cap_table
+    severity: high
+    confidence: 88
+    # Matches the whole equity clause once. Anchoring on each percentage instead
+    # would report the same cap table four times, which is how a report becomes
+    # something people skim.
+    pattern: '(?i)\b(?:cap table|founders?\s+\d{1,3}\s?%|ESOP\s+\d{1,3}\s?%)[^\n]{0,200}'
+    group: 0
+
+  - id: commercial.valuation.v1
+    name: Company valuation
+    category: commercial
+    subtype: valuation
+    severity: high
+    confidence: 90
+    pattern: '(?i)\b(?:valu(?:ed|ation)|pre-?money|post-?money)\b[^\n]{0,25}?([£$€]\s?[\d,.]+\s?[kmb])'
+    group: 1
+
+  - id: commercial.fundraising.v1
+    name: Fundraising terms
+    category: commercial
+    subtype: fundraising_terms
+    severity: high
+    confidence: 85
+    pattern: '(?i)\b(?:raise|raising|term sheet|series [a-e]\b|round)\b[^\n]{0,40}?([£$€]\s?[\d,.]+\s?[kmb])'
+    group: 1
+
+  - id: commercial.restructuring.v1
+    name: Redundancy or restructuring plan
+    category: commercial
+    subtype: restructuring_plan
+    severity: high
+    confidence: 88
+    pattern: '(?i)\b(?:cut|reduce|reducing|cutting)\s+(?:the\s+)?headcount\b[^\n]{0,20}|(?:redundanc|restructur|layoffs?|RIF)\w*'
+
+  - id: commercial.unannounced.v1
+    name: Unannounced product or launch
+    category: commercial
+    subtype: unannounced_launch
+    severity: high
+    confidence: 80
+    pattern: '(?i)\b(?:unannounced|not yet announced|pre-?launch|under embargo|stealth)\b[^\n]{0,60}'
+
+  - id: commercial.headcount_comp.v1
+    name: Headcount plan or compensation band
+    category: commercial
+    subtype: headcount_comp
+    severity: medium
+    confidence: 75
+    pattern: '(?i)\b(?:headcount plan|comp(?:ensation)? band|salary band|bonus pool|equity grant)\b'

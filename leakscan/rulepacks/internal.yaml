@@ -1,0 +1,77 @@
+pack: internal
+version: 1
+
+# Internal and proprietary material.
+#
+# The classification-banner rules are the best value in the whole catalogue:
+# cheap, precise, and the document has already declared itself confidential, so
+# there is no judgement call to make.
+#
+# The `internal.custom_term` rule at the bottom is the one every customer edits.
+# Client names and project codenames are the category no vendor can ship —
+# nobody but you knows that "Kestrel" matters.
+
+rules:
+  - id: internal.classification_banner.v1
+    name: Confidentiality banner
+    category: internal
+    subtype: classification_banner
+    severity: medium
+    confidence: 95
+    pattern: '(?i)\b(?:strictly )?(?:confidential(?: ?[—\-–] ?(?:internal only|board only|do not distribute))?|internal only|internal use only|proprietary and confidential|do not distribute|not for distribution|privileged and confidential|commercial in confidence)\b'
+
+  - id: internal.under_nda.v1
+    name: Material under NDA
+    category: internal
+    subtype: under_nda
+    severity: high
+    confidence: 90
+    pattern: '(?i)\b(?:under (?:an )?NDA|subject to (?:an )?NDA|covered by (?:an )?NDA|NDA[- ]protected)\b'
+
+  - id: internal.hostname.v1
+    name: Internal hostname
+    category: internal
+    subtype: internal_hostname
+    severity: medium
+    confidence: 85
+    pattern: '\b[a-z0-9][a-z0-9-]*\.(?:internal|intranet|corp|local|lan|private)\.[a-z0-9.-]+\b|\b[a-z0-9-]+\.(?:internal|intranet|corp)\b'
+
+  - id: internal.private_ip.v1
+    name: Private network address
+    category: internal
+    subtype: private_ip
+    severity: low
+    confidence: 80
+    pattern: '\b(?:10\.\d{1,3}\.\d{1,3}\.\d{1,3}|192\.168\.\d{1,3}\.\d{1,3}|172\.(?:1[6-9]|2\d|3[01])\.\d{1,3}\.\d{1,3})\b'
+
+  - id: internal.admin_url.v1
+    name: Internal admin or staging URL
+    category: internal
+    subtype: internal_url
+    severity: medium
+    confidence: 80
+    pattern: 'https?://(?:admin|staging|stage|internal|intranet|dev|uat|preprod)[.-][a-z0-9.-]+'
+
+  - id: internal.project_codename.v1
+    name: Project codename
+    category: internal
+    subtype: project_codename
+    severity: medium
+    confidence: 70
+    pattern: '(?i)\b(?:project|programme|program|operation|codename[d]?)\s+([A-Z][a-z]{3,}\b)'
+    group: 1
+
+  # ------------------------------------------------------------------------
+  # CUSTOMISE ME. Replace the placeholder alternatives below with your own
+  # client names, product codenames and internal system names, then re-run the
+  # scan. This rule is why the packs are YAML.
+  #
+  #   pattern: '(?i)\b(Halyard Freight|Project Kestrel|Northgate)\b'
+  # ------------------------------------------------------------------------
+  - id: internal.custom_term.v1
+    name: Customer-defined confidential term
+    category: internal
+    subtype: custom_term
+    severity: high
+    confidence: 95
+    pattern: '(?!x)x'
